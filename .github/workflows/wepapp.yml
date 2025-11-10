@@ -53,7 +53,7 @@ jobs:
               --name $APP_SERVICE_PLAN_NAME \
               --resource-group $RESOURCE_GROUP_NAME \
               --location $LOCATION \
-              --sku B1 # Basic tier
+              --sku F1 # Basic tier
 
             # Deploy Web App into the specified RG
             az webapp create \
