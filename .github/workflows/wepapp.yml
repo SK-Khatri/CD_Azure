@@ -1,42 +1,58 @@
-name: Deploy WebApp via OIDC
+name: Run Azure Login with OIDC
+on: [push]
 
-on:
-  push:
-    branches:
-      - main
-
-# CRITICAL: This is required for GitHub to issue the OIDC token
 permissions:
-  id-token: write # Allows generation of the JWT OIDC token
-  contents: read  # Allows checkout of the code
-
+  id-token: write # Required for OIDC
+  contents: read
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # environment: Production # Recommended for deploying to Prod, enabling security rules
-
+   # environment: # Optional: Good practice to link to a GitHub Environment
+    #  name: Production 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # === STEP 1: AZURE OIDC LOGIN (Secretless Authentication) ===
-    - name: Azure Login (OIDC)
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Azure login 🔑
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          # Enable OIDC authentication
+          enable-AzPSSession: true 
+          
+      - name: Run Azure CLI commands
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            echo "Successfully logged in to Azure."
+            # The 'az account show' command verifies the identity used for login.
+            az account show --output table
 
-    # === STEP 2: BUILD ARTIFACT (Replace with your actual build steps) ===
-    - name: Build with dotnet
-      run: |
-        dotnet restore
-        dotnet publish -c Release -o './myapp' 
+            # --- Sample Deployment Script ---
+            RESOURCE_GROUP_NAME="My-WebApp-RG" 
+            LOCATION="eastus"
 
-    # === STEP 3: DEPLOY TO AZURE WEB APP ===
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'my-oidc-secure-webapp' # Your App Service Name
-        package: './myapp' # The folder containing the deployable artifact
-        # Note: No 'publish-profile' or 'creds' input is needed here!
+            # 1. Create the Resource Group if it doesn't exist
+            echo "Ensuring Resource Group $RESOURCE_GROUP_NAME exists..."
+            az group create --name $RESOURCE_GROUP_NAME --location $LOCATION --output none
+
+            # 2. Deploy a simple Azure Web App (Example)
+            echo "Deploying a simple Azure Web App..."
+            APP_SERVICE_PLAN_NAME="my-gh-plan-${{ github.run_id }}"
+            WEB_APP_NAME="gh-oidc-app-${{ github.run_id }}"
+
+            az appservice plan create \
+              --name $APP_SERVICE_PLAN_NAME \
+              --resource-group $RESOURCE_GROUP_NAME \
+              --location $LOCATION \
+              --sku B1 # Basic tier
+
+            az webapp create \
+              --name $WEB_APP_NAME \
+              --resource-group $RESOURCE_GROUP_NAME \
+              --plan $APP_SERVICE_PLAN_NAME
+
+            echo "Deployment complete. Web App URL: https://${WEB_APP_NAME}.azurewebsites.net"
