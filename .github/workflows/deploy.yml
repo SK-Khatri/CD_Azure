@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main # Trigger on push to the main branch
+# CRITICAL: This is required for GitHub to issue the OIDC token
+permissions:
+  id-token: write # Allows generation of the JWT OIDC token
+  contents: read  # Allows checkout of the code
 
 jobs:
   build-and-deploy:
