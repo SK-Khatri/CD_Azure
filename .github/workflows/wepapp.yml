@@ -33,7 +33,7 @@ jobs:
 
             # Define the target Resource Group and location
             RESOURCE_GROUP_NAME="AFCTESTING" 
-            LOCATION="eastus" # Ensure this matches the RG's actual location
+            LOCATION="centralus" # Ensure this matches the RG's actual location
 
             # 🛑 IMPORTANT: The 'az group create' command is REMOVED.
             # This workflow will FAIL if the 'AFCTESTING' RG does not already exist, 
